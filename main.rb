@@ -7,259 +7,242 @@ require_relative 'wagon'
 require_relative 'passenger_wagon'
 require_relative 'cargo_wagon'
 
-def choose_element(elements)
-  loop do
-    elements.each.with_index(1) do |element, index|
-      puts "#{index}-\"#{element.description}\""
-    end
-
-    index = gets.chomp.to_i - 1
-    if index >= 0 && !elements[index].nil?
-      return elements[index]  
-    end
-  end
-end
-
-# Секция Станции
-def section_stations(stations)
-  loop do
-    puts "\nВыберите станцию для просмотра поездов или создайте новую (+)"
-
-    stations.each.with_index(1) do |station, index|
-      puts "#{index}-\"#{station.name}\""
-    end
-    puts "0-Назад"
-
-    action = gets.chomp
-    break if action == "0"  
+class Main
   
-    if action == "+"
-      puts "Введите название станции"
-      name = gets.chomp
-      stations << Station.new(name)
-    else
-      index = action.to_i - 1
+  MAIN_MENU              = ['Станции', 'Поезда', 'Маршруты']
+  STATIONS_MENU          = ['Создать станцию', 'Показать поезда на станции']
+  TRAINS_MENU            = ['Создать поезд', 'Выбрать поезд для дальнейших действий']
+  ACTION_WITH_TRAIN_MENU = ['Прицепить вагоны', 'Отцепить вагоны', 'Назначить маршрут',
+                            'Отправиться на следующую станцию', 'Вернуться на предыдущую станцию']
+  TRAIN_TYPES_MENU       = ['Грузовой', 'Пассажирский']
+  ROUTES_MENU            = ['Создать маршрут', 'Выбрать маршрут для дальнейших действий']
+  ACTION_WITH_ROUTE_MENU = ['Добавить станцию', 'Удалить станцию']
 
-      if index >= 0 && !stations[index].nil?
-        station = stations[index]
+  def run
+    @stations = []
+    @trains = []
+    @trains_wagons = {}
+    @routes = []
 
-        if station.trains.empty? 
-          puts "На станции \"#{station.name}\" нет поездов"
-        else
-          puts "Позда на станции \"#{station.name}\":"
-          station.trains.each { |train| puts train.description }  
-        end
-      end
-    end
-  end
-end
+    loop do
+      show_menu(MAIN_MENU)
 
-
-# Секция Поезда
-def create_train
-  loop do
-    puts "Выберите тип поезда"
-    puts "1-Грузовой"
-    puts "2-Пассажирский"
-    train_type = gets.chomp.to_i
-
-    if [1, 2].include?(train_type)
-      puts "Введите номер поезда"
-      train_number = gets.chomp
-      return train_type == 1 ? CargoTrain.new(train_number) : PassengerTrain.new(train_number)
-    end
-  end  
-end
-
-def attach_wagons(train, trains_wagons)
-  puts "Введите количество прицепляемых вагонов"
-  wagon_count = gets.chomp.to_i
-  wagon_count.times do
-    if train.type == :cargo
-      wagon = CargoWagon.new
-    else
-      wagon = PassengerWagon.new
-    end
-    train.attach_wagon(wagon)
-    trains_wagons[train] = [] if trains_wagons[train].nil?
-    trains_wagons[train] << wagon
-  end 
-end
-
-def detach_wagons(train, trains_wagons)
-  puts "Введите количество отцепляемых вагонов"
-  wagon_count = gets.chomp.to_i
-  trains_wagons[train] = [] if trains_wagons[train].nil?
-
-  wagon_count.times.with_index(1) do |index|
-    wagon = trains_wagons[train][index]
-    break if wagon.nil?
-    train.detach_wagon(wagon)
-    trains_wagons[train][index] = nil    
-  end 
-
-  trains_wagons[train].compact!
-end
-
-def set_route(train, routes)
-  if routes.empty?
-    puts "Для начала создайте маршрут"
-    return
-  end
-
-  puts "Выберите маршрут"
-  route = choose_element(routes)
-
-  train.set_route(route)
-end
-
-def section_trains(trains, trains_wagons, routes)
-  loop do
-    puts "\nВыберите поезд для дальнейших действий или создайте новый (+)"
-
-    trains.each.with_index(1) do |train, index|
-      puts "#{index}-\"#{train.description}\""
-    end
-
-    puts "0-Назад"
-
-    action = gets.chomp
-    break if action == "0"
-
-    if action == "+"
-      trains << create_train
-    else
-
-      index = action.to_i - 1
-      if index >= 0 && !trains[index].nil?
-        train = trains[index]
-
-        loop do
-          puts "\nВыберите действие с поездом \"#{train.description}\""
-          puts "1-Прицепить вагоны"
-          puts "2-Отцепить вагоны"
-          puts "3-Назначить маршрут"
-          puts "4-Отправиться на следующую станцию"
-          puts "5-Вернуться на предыдущую станцию"
-          puts "0-Назад"
-
-          action_with_train = gets.chomp.to_i
-          break if action_with_train.zero?
-
-          if action_with_train == 1
-            attach_wagons(train, trains_wagons)  
-          elsif action_with_train == 2
-            detach_wagons(train, trains_wagons)
-          elsif action_with_train == 3
-            set_route(train, routes)
-          elsif action_with_train == 4
-            train.go_forward
-          elsif action_with_train == 5
-            train.go_back
-          end
-        end
-      end
-
-    end
-
-  end
-end
-
-
-# Секция Маршруты
-def create_route(stations)
-  if stations.size < 2
-    puts "Для начала создайте минимум 2 станции"
-    return
-  end
-
-  puts "Выберите начальную станцию"
-  start = choose_element(stations)
-
-  puts "Выберите конечную станцию"
-  finish = choose_element(stations)
-
-  Route.new(start, finish) unless start == finish
-end
-
-def add_station(route, stations)
-  puts "Выберите добавляемую станцию"
-  station = choose_element(stations)
-
-  route.add_station(station) unless station.nil?
-end
-
-def delete_station(route)
-  if route.stations.size < 3
-    puts "У маршрута должно быть больше двух станций"
-    return
-  end
-
-  puts "Выберите удаляемую станцию"
-  station = choose_element(route.stations[1, route.stations.size - 2])
-
-  route.delete_station(station) unless station.nil?
-end
-
-def section_routes(routes, stations)
-  loop do
-    puts "\nВыберите маршрут для дальнейших действий или создайте новый (+)"
-
-    routes.each.with_index(1) do |route, index|
-      puts "#{index}-\"#{route.description}\""
-    end
-
-    puts "0-Назад"
-
-    action = gets.chomp
-    break if action == "0"
-
-    if action == "+"
-      route = create_route(stations)
-      routes << route unless route.nil?
-    else
-      index = action.to_i - 1
-      if index >= 0 && !routes[index].nil?
-        route = routes[index]
-
-        loop do
-          puts "\nВыберите действие с маршрутом \"#{route.description}\""
-          puts "1-Добавить станцию"
-          puts "2-Удалить станцию"
-          puts "0-Назад"
-
-          action_with_route = gets.chomp.to_i
-          break if action_with_route.zero?
-
-          if action_with_route == 1
-            add_station(route, stations)  
-          elsif action_with_route == 2
-            delete_station(route)   
-          end
-        end
+      case gets.to_i
+      when 0 then break
+      when 1 then stations_menu
+      when 2 then trains_menu
+      when 3 then routes_menu
       end
     end  
   end
-end
 
+  private
 
-stations = []
-trains = []
-trains_wagons = {}
-routes = []
-
-loop do
-  puts "\nВыберите раздел: \n1-Станции \n2-Поезда \n3-Маршруты \n0-Выход"
-
-  action = gets.chomp.to_i
-  break if action.zero?
-
-  case action
-  when 1
-    section_stations(stations)
-  when 2
-    section_trains(trains, trains_wagons, routes)
-  when 3
-    section_routes(routes, stations)
+  def show_menu(menu, show_exit = true)
+    puts
+    menu.each.with_index(1) do |item, index|
+      puts "#{index}-#{item}"
+    end
+    puts "0-Выход" if show_exit
   end
+
+  def show_collection(elements)
+    elements.each.with_index(1) do |element, index|
+      puts "#{index}-\"#{element.description}\""
+    end  
+  end
+
+  def choose_element(elements)
+    return if elements.empty?
+    loop do
+      show_collection(elements)
+
+      index = gets.chomp.to_i - 1
+      if index >= 0 && !elements[index].nil?
+        return elements[index]  
+      end
+    end
+  end
+
+  def create_station
+    puts "Введите название станции"
+    name = gets.chomp
+    station = Station.new(name)
+    puts "Создана станция: \"#{station.description}\""
+    @stations << station
+  end
+
+  def show_station_trains
+    station = choose_element(@stations)
+    return unless station
+    if station.trains.empty?
+      puts "На станции \"#{station.description}\" нет поездов"
+    else
+      puts "Поезда на станции \"#{station.description}\":"
+      show_collection(station.trains)
+    end
+  end
+
+  def stations_menu
+    loop do
+      show_menu(STATIONS_MENU)
+      case gets.to_i
+      when 0 then break
+      when 1 then create_station
+      when 2 then show_station_trains
+      end
+    end
+  end
+
+  def create_train
+    loop do
+      show_menu(TRAIN_TYPES_MENU, false)
+      train_type = gets.chomp.to_i
+
+      next unless [1, 2].include?(train_type)
+
+      puts "Введите номер поезда"
+      train_number = gets.chomp
+
+      train = train_type == 1 ? CargoTrain.new(train_number) : PassengerTrain.new(train_number)
+      puts "Создан поезд: \"#{train.description}\""
+      @trains << train
+      break
+    end  
+  end
+
+  def attach_wagons(train)
+    puts "Введите количество прицепляемых вагонов"
+    wagon_count = gets.chomp.to_i
+    wagon_count.times do
+      wagon = train.is_a?(CargoTrain) ? CargoWagon.new : PassengerWagon.new
+      train.attach_wagon(wagon)
+      @trains_wagons[train] = [] if @trains_wagons[train].nil?
+      @trains_wagons[train] << wagon
+    end 
+  end
+
+  def detach_wagons(train)
+    puts "Введите количество отцепляемых вагонов"
+    wagon_count = gets.chomp.to_i
+    @trains_wagons[train] = [] if @trains_wagons[train].nil?
+
+    wagon_count.times.with_index(1) do |index|
+      wagon = @trains_wagons[train][index]
+      break if wagon.nil?
+      train.detach_wagon(wagon)
+      @trains_wagons[train][index] = nil    
+    end 
+
+    @trains_wagons[train].compact!
+  end
+
+  def set_route(train)
+    if @routes.empty?
+      puts "ОШИБКА: Для начала создайте маршрут"
+      return
+    end
+
+    puts "Выберите маршрут"
+    route = choose_element(@routes)
+    train.set_route(route)
+  end
+
+  def action_with_train_menu
+    train = choose_element(@trains)
+    return unless train
+
+    loop do
+      puts "\nВыберите действие с поездом \"#{train.description}\""
+      show_menu(ACTION_WITH_TRAIN_MENU)
+
+      case gets.to_i
+      when 0 then break
+      when 1 then attach_wagons(train)
+      when 2 then detach_wagons(train)
+      when 3 then set_route(train)
+      when 4 then train.go_forward
+      when 5 then train.go_back
+      end
+    end
+  end
+
+  def trains_menu
+    loop do
+      show_menu(TRAINS_MENU)
+      case gets.to_i
+      when 0 then break
+      when 1 then create_train
+      when 2 then action_with_train_menu
+      end
+    end
+  end
+
+  def create_route
+    if @stations.size < 2
+      puts "ОШИБКА: Для начала создайте минимум 2 станции"
+      return
+    end
+
+    puts "Выберите начальную станцию"
+    start = choose_element(@stations)
+
+    puts "Выберите конечную станцию"
+    finish = choose_element(@stations)
+
+    return if start == finish
+    route = Route.new(start, finish)
+    puts "Создан маршрут: \"#{route.description}\""
+    @routes << route
+  end
+
+  def add_station(route)
+    puts "Выберите добавляемую станцию"
+    station = choose_element(@stations)
+
+    route.add_station(station) unless station.nil?
+  end
+
+  def delete_station(route)
+    if route.stations.size < 3
+      puts "ОШИБКА: У маршрута должно быть больше двух станций"
+      return
+    end
+
+    puts "Выберите удаляемую станцию"
+    station = choose_element(route.stations[1, route.stations.size - 2])
+
+    route.delete_station(station) unless station.nil?
+  end
+
+  def action_with_route_menu
+    route = choose_element(@routes)
+    return unless route
+
+    loop do
+      puts "\nВыберите действие с маршрутом \"#{route.description}\""
+      show_menu(ACTION_WITH_ROUTE_MENU)
+
+      case gets.to_i
+      when 0 then break
+      when 1 then add_station(route)
+      when 2 then delete_station(route)
+      end
+    end  
+  end
+
+  def routes_menu
+    loop do
+      show_menu(ROUTES_MENU)
+      case gets.to_i
+      when 0 then break
+      when 1 then create_route
+      when 2 then action_with_route_menu
+      end
+    end
+  end
+
 end
+
+main = Main.new
+main.run

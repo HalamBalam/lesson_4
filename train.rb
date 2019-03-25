@@ -1,5 +1,5 @@
 class Train
-  attr_reader :number, :type, :speed
+  attr_reader :number, :speed
 
   def initialize(number)
     @number = number
@@ -17,11 +17,14 @@ class Train
   end
 
   def attach_wagon(wagon)
-    @wagons << wagon if @speed == 0 && wagon.type == type
+    return unless speed.zero?
+    return unless attachable_wagon?(wagon)
+    @wagons << wagon
   end
 
   def detach_wagon(wagon)
-    @wagons.delete(wagon) if @speed == 0
+    return unless speed.zero?
+    @wagons.delete(wagon)
   end
 
   def wagons_count
@@ -61,7 +64,7 @@ class Train
   end
 
   def description
-    type_str = type == :cargo ? "Грузовой" : "Пассажирский"
+    type_str = self.is_a?(CargoTrain) ? "Грузовой" : "Пассажирский"
     if @route.nil?
       "#{type_str} поезд № #{number} (вагонов: #{wagons_count}, скорость: #{speed})"
     else
