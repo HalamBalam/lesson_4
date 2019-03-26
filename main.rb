@@ -18,12 +18,13 @@ class Main
   ROUTES_MENU            = ['Создать маршрут', 'Выбрать маршрут для дальнейших действий']
   ACTION_WITH_ROUTE_MENU = ['Добавить станцию', 'Удалить станцию']
 
-  def run
+  def initialize
     @stations = []
     @trains = []
-    @trains_wagons = {}
     @routes = []
+  end
 
+  def run
     loop do
       show_menu(MAIN_MENU)
 
@@ -117,24 +118,18 @@ class Main
     wagon_count.times do
       wagon = train.is_a?(CargoTrain) ? CargoWagon.new : PassengerWagon.new
       train.attach_wagon(wagon)
-      @trains_wagons[train] = [] if @trains_wagons[train].nil?
-      @trains_wagons[train] << wagon
     end 
   end
 
   def detach_wagons(train)
     puts "Введите количество отцепляемых вагонов"
     wagon_count = gets.chomp.to_i
-    @trains_wagons[train] = [] if @trains_wagons[train].nil?
 
-    wagon_count.times.with_index(1) do |index|
-      wagon = @trains_wagons[train][index]
+    wagon_count.times do
+      wagon = train.wagons[0]
       break if wagon.nil?
       train.detach_wagon(wagon)
-      @trains_wagons[train][index] = nil    
     end 
-
-    @trains_wagons[train].compact!
   end
 
   def set_route(train)
